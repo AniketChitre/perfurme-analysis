@@ -208,8 +208,10 @@ export default function ScentMapperPage({ perfumes: initialPerfumes, accordColum
         }
       </main>
       <footer className="text-center p-4 border-t text-muted-foreground text-sm">
-        <p>Created with elegance by <s className="text-muted-foreground/80">an expert UX designer</s> Google Firebase</p>
-        <p className="text-xs mt-2">Note: This app now loads data from <code>src/data/perfume-data.csv</code>. Please replace the sample file with your own data.</p>
+        <p>Created by UX novice (Aniket Chitre) vibe coding on Firebase.</p>
+        <a href="https://www.kaggle.com/datasets/olgagmiufana1/fragrantica-com-fragrance-dataset" target="_blank" rel="noopener noreferrer" className="text-xs mt-2 hover:underline">
+            https://www.kaggle.com/datasets/olgagmiufana1/fragrantica-com-fragrance-dataset
+        </a>
       </footer>
     </div>
   );
