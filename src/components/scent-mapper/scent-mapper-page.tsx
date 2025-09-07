@@ -1,67 +1,31 @@
 "use client";
 
 import { useState, useTransition, useCallback, useMemo } from "react";
-import { useDropzone } from "react-dropzone";
 import type { PerfumeData, Accord } from "@/lib/types";
 import { normalizeAccordLabels } from "@/ai/flows/normalize-accord-labels";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, File as FileIcon, UploadCloud, Wand2, FlaskConical } from "lucide-react";
+import { Loader2, Wand2, FlaskConical, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
 import AccordBarChart from "./accord-barchart";
 import AccordTable from "./accord-table";
-import { Skeleton } from "@/components/ui/skeleton";
 import ClusterMap from "./cluster-map";
 
-export default function ScentMapperPage() {
-  const [rawPerfumes, setRawPerfumes] = useState<PerfumeData[] | null>(null);
+interface ScentMapperPageProps {
+    perfumes: PerfumeData[];
+    accordColumns: string[];
+    error: string | null;
+}
+
+export default function ScentMapperPage({ perfumes: initialPerfumes, accordColumns: initialAccordColumns, error }: ScentMapperPageProps) {
+  const [rawPerfumes, setRawPerfumes] = useState<PerfumeData[] | null>(initialPerfumes);
+  const [accordColumns, setAccordColumns] = useState<string[]>(initialAccordColumns);
   const [originalAccords, setOriginalAccords] = useState<Accord[] | null>(null);
-  const [normalizedAccords, setNormalizedAccords] = useState<Accord[] | null>(
-    null
-  );
-  const [accordColumns, setAccordColumns] = useState<string[]>([]);
+  const [normalizedAccords, setNormalizedAccords] = useState<Accord[] | null>(null);
   const [isNormalized, setIsNormalized] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [isNormalizing, startNormalizationTransition] = useTransition();
   const { toast } = useToast();
-  const [fileName, setFileName] = useState<string | null>(null);
-
-  const displayedAccords = useMemo(() => {
-    return isNormalized ? normalizedAccords : originalAccords;
-  }, [isNormalized, originalAccords, normalizedAccords]);
-
-  const parseCSV = (csvText: string): { perfumes: PerfumeData[], accordColumns: string[] } => {
-    const lines = csvText.trim().split(/\r\n|\n/);
-    if (lines.length < 2) throw new Error("CSV file must contain a header and at least one data row.");
-
-    const headerLine = lines[0];
-    if (headerLine.split(';').length <= 1) {
-        throw new Error("Invalid delimiter. Please use a semicolon (;) delimited file.");
-    }
-    const headers = headerLine.split(';').map(h => h.trim());
-    
-    const dynamicAccordColumns = headers.filter(h => {
-        const lowerCaseHeader = h.toLowerCase();
-        return lowerCaseHeader.startsWith('accord_') || lowerCaseHeader.startsWith('mainaccord');
-    });
-
-    if (dynamicAccordColumns.length === 0) {
-        throw new Error(`CSV must contain columns starting with 'accord_' or 'mainaccord'.`);
-    }
-
-    const data = lines.slice(1).map((line) => {
-      const values = line.split(';').map(v => v.trim());
-      const entry: PerfumeData = {};
-      headers.forEach((header, index) => {
-        entry[header] = values[index] || "";
-      });
-      return entry;
-    });
-
-    return { perfumes: data, accordColumns: dynamicAccordColumns };
-  };
 
   const analyzeAccords = (perfumes: PerfumeData[], columns: string[]): Accord[] => {
     const frequencyMap = new Map<string, { count: number; ratings: number[] }>();
@@ -115,61 +79,18 @@ export default function ScentMapperPage() {
       
     return sortedAccords;
   };
+
+  // Perform initial analysis once
+  useMemo(() => {
+    if (initialPerfumes && initialAccordColumns.length > 0) {
+      const analysisResult = analyzeAccords(initialPerfumes, initialAccordColumns);
+      setOriginalAccords(analysisResult);
+    }
+  }, [initialPerfumes, initialAccordColumns]);
   
-  const handleFile = (file: File) => {
-    setIsLoading(true);
-    setFileName(file.name);
-    const reader = new FileReader();
-
-    reader.onload = (e) => {
-      try {
-        const text = e.target?.result as string;
-        if (!text) throw new Error("File is empty.");
-        const { perfumes: parsedData, accordColumns: dynamicAccordColumns } = parseCSV(text);
-        setRawPerfumes(parsedData);
-        setAccordColumns(dynamicAccordColumns);
-
-        const analysisResult = analyzeAccords(parsedData, dynamicAccordColumns);
-        setOriginalAccords(analysisResult);
-        
-        setNormalizedAccords(null);
-        setIsNormalized(false);
-      } catch (error: any) {
-        toast({
-          variant: "destructive",
-          title: "Oh no! Something went wrong.",
-          description: error.message,
-        });
-        handleReset();
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    reader.onerror = () => {
-        toast({
-            variant: "destructive",
-            title: "File Read Error",
-            description: "Could not read the selected file.",
-        });
-        handleReset();
-        setIsLoading(false);
-    }
-
-    reader.readAsText(file, 'latin1');
-  }
-
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    if (acceptedFiles.length > 0) {
-      handleFile(acceptedFiles[0]);
-    }
-  }, []);
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: { 'text/csv': ['.csv'] },
-    multiple: false,
-  });
+  const displayedAccords = useMemo(() => {
+    return isNormalized ? normalizedAccords : originalAccords;
+  }, [isNormalized, originalAccords, normalizedAccords]);
 
   const handleNormalizationToggle = (checked: boolean) => {
     setIsNormalized(checked);
@@ -213,15 +134,24 @@ export default function ScentMapperPage() {
     }
   };
 
-  const handleReset = () => {
-    setRawPerfumes(null);
-    setOriginalAccords(null);
-    setNormalizedAccords(null);
-    setIsNormalized(false);
-    setAccordColumns([]);
-    setFileName(null);
-    setIsLoading(false);
+  if (error) {
+    return (
+        <div className="flex items-center justify-center min-h-screen">
+            <Card className="w-full max-w-lg text-center">
+                <CardHeader>
+                    <CardTitle className="font-headline text-2xl text-destructive flex items-center justify-center gap-2">
+                        <AlertTriangle /> Error Loading Data
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p>{error}</p>
+                    <p className="mt-4 text-sm text-muted-foreground">Please check the console for more details.</p>
+                </CardContent>
+            </Card>
+        </div>
+    )
   }
+
 
   return (
     <div className="min-h-screen bg-background text-foreground font-body">
@@ -250,74 +180,36 @@ export default function ScentMapperPage() {
             </svg>
             Scent Mapper
           </h1>
-          {rawPerfumes && <Button onClick={handleReset} variant="outline">Upload New File</Button>}
+          <div className="flex items-center space-x-2 p-2 rounded-lg bg-card border">
+            <Wand2 className="h-5 w-5 text-primary" />
+            <Label htmlFor="normalization-switch">AI Normalize Labels</Label>
+            <Switch
+              id="normalization-switch"
+              checked={isNormalized}
+              onCheckedChange={handleNormalizationToggle}
+              disabled={isNormalizing}
+            />
+            {isNormalizing && <Loader2 className="h-4 w-4 animate-spin" />}
+          </div>
         </div>
       </header>
       <main className="container mx-auto p-4 md:p-8">
-        {!rawPerfumes ? (
-          <div className="flex flex-col items-center justify-center h-[60vh]">
-            <Card className="w-full max-w-lg text-center">
-                <CardHeader>
-                    <CardTitle className="font-headline text-2xl">Upload Your Perfume Data</CardTitle>
-                    <CardDescription>Drag &amp; drop a semicolon-delimited CSV file or click to select.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div {...getRootProps()} className={`p-10 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${isDragActive ? 'border-primary bg-accent' : 'border-border hover:border-primary'}`}>
-                        <input {...getInputProps()} />
-                        <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                            <UploadCloud className="w-12 h-12" />
-                            <p>{isDragActive ? 'Drop the file here...' : 'Drag & drop or click to upload'}</p>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
-          </div>
-        ) : isLoading ? (
-          <div className="grid gap-8">
-            <div className="flex justify-between items-center">
-                <Skeleton className="h-8 w-48" />
-                <Skeleton className="h-8 w-32" />
-            </div>
-            <div className="grid md:grid-cols-2 gap-8">
-                <Skeleton className="h-[400px] w-full" />
-                <Skeleton className="h-[400px] w-full" />
-            </div>
-            <Skeleton className="h-[400px] w-full" />
-          </div>
-        ) : (
-          displayedAccords && (
+        {displayedAccords && rawPerfumes && (
             <div className="grid gap-8">
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div className="flex items-center space-x-2 p-2 rounded-lg bg-card border">
-                    <FileIcon className="h-5 w-5 text-primary"/>
-                    <span className="font-medium text-primary-foreground">{fileName}</span>
-                </div>
-                <div className="flex items-center space-x-2 p-2 rounded-lg bg-card border">
-                  <Wand2 className="h-5 w-5 text-primary" />
-                  <Label htmlFor="normalization-switch">AI Normalize Labels</Label>
-                  <Switch
-                    id="normalization-switch"
-                    checked={isNormalized}
-                    onCheckedChange={handleNormalizationToggle}
-                    disabled={isNormalizing}
-                  />
-                  {isNormalizing && <Loader2 className="h-4 w-4 animate-spin" />}
-                </div>
-              </div>
-
               <div className="grid md:grid-cols-2 gap-8">
                 <AccordBarChart data={displayedAccords} />
                 <AccordTable data={displayedAccords} />
               </div>
               <div className="grid grid-cols-1 gap-8">
-                 {rawPerfumes && <ClusterMap perfumes={rawPerfumes} accordColumns={accordColumns} />}
+                 <ClusterMap perfumes={rawPerfumes} accordColumns={accordColumns} />
               </div>
             </div>
           )
-        )}
+        }
       </main>
       <footer className="text-center p-4 border-t text-muted-foreground text-sm">
         <p>Created with elegance by <s className="text-muted-foreground/80">an expert UX designer</s> Google Firebase</p>
+        <p className="text-xs mt-2">Note: This app now loads data from <code>src/data/perfume-data.csv</code>. Please replace the sample file with your own data.</p>
       </footer>
     </div>
   );
