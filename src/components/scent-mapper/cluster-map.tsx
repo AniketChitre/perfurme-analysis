@@ -100,9 +100,9 @@ export default function ClusterMap({ perfumes, accordColumns }: ClusterMapProps)
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
 
-  const [debouncedK] = useDebounce(k, 250);
-  const [debouncedYearRange] = useDebounce(yearRange, 250);
-  const [debouncedMinRating] = useDebounce(minRating, 250);
+  const debouncedK = useDebounce(k, 250);
+  const debouncedYearRange = useDebounce(yearRange, 250);
+  const debouncedMinRating = useDebounce(minRating, 250);
 
   const processedData = useMemo(() => {
     // 1. Filter and normalize perfumes
@@ -357,7 +357,7 @@ export default function ClusterMap({ perfumes, accordColumns }: ClusterMapProps)
                                     <p className="text-sm text-muted-foreground">{data.perfume.Brand} ({data.perfume.Year})</p>
                                     <p className="text-sm font-medium">Rating: {parseFloat(data.perfume["Rating Value"]?.replace(',', '.') || '0').toFixed(2)}</p>
                                     <p className="text-xs mt-2 break-words">
-                                    <span className="font-semibold">Accords: </span>
+                                    <span className="font-semibold">Accords: </span> 
                                     {data.processedAccords.join(", ")}
                                     </p>
                                 </div>
