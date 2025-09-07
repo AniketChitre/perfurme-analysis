@@ -5,7 +5,7 @@ import { useDropzone } from "react-dropzone";
 import type { PerfumeData, Accord } from "@/lib/types";
 import { normalizeAccordLabels } from "@/ai/flows/normalize-accord-labels";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, File as FileIcon, UploadCloud, Wand2 } from "lucide-react";
+import { Loader2, File as FileIcon, UploadCloud, Wand2, FlaskConical } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -95,7 +95,7 @@ export default function ScentMapperPage() {
         return [];
     }
 
-    const totalPerfumes = perfumes.length;
+    const totalPerfumesWithAccords = new Set(perfumes.filter(p => columns.some(col => p[col]))).size;
 
     const sortedAccords: Accord[] = Array.from(frequencyMap.entries())
       .map(([accord, { count, ratings }]) => {
@@ -104,7 +104,7 @@ export default function ScentMapperPage() {
         return { 
           accord, 
           count, 
-          share: (count / totalPerfumes) * 100,
+          share: (count / totalPerfumesWithAccords) * 100,
           averageRating
         };
       })
@@ -221,7 +221,10 @@ export default function ScentMapperPage() {
     <div className="min-h-screen bg-background text-foreground font-body">
       <header className="p-4 border-b">
         <div className="container mx-auto flex justify-between items-center">
-          <h1 className="text-3xl font-headline text-primary-foreground">Scent Mapper</h1>
+          <h1 className="text-3xl font-headline text-primary-foreground flex items-center gap-2">
+            <FlaskConical className="h-8 w-8 text-primary" />
+            Scent Mapper
+          </h1>
           {rawPerfumes && <Button onClick={handleReset} variant="outline">Upload New File</Button>}
         </div>
       </header>
