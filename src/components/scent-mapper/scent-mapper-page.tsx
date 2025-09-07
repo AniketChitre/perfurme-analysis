@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useTransition, useCallback, ChangeEvent, useMemo } from "react";
+import { useState, useTransition, useCallback, useMemo } from "react";
 import { useDropzone } from "react-dropzone";
 import type { PerfumeData, Accord } from "@/lib/types";
 import { normalizeAccordLabels } from "@/ai/flows/normalize-accord-labels";
 import { useToast } from "@/hooks/use-toast";
-import { BarChart, Loader2, Tags, File as FileIcon, UploadCloud, TableIcon, Wand2 } from "lucide-react";
+import { Loader2, File as FileIcon, UploadCloud, Wand2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -15,15 +15,11 @@ import AccordTable from "./accord-table";
 import AccordChipCloud from "./accord-chip-cloud";
 import { Skeleton } from "@/components/ui/skeleton";
 
-const ACCORD_COLUMNS = [
-  "accord_1", "accord_2", "accord_3", "accord_4", "accord_5",
-  "accord_6", "accord_7", "accord_8", "accord_9", "accord_10",
-];
-
 export default function ScentMapperPage() {
   const [rawPerfumes, setRawPerfumes] = useState<PerfumeData[] | null>(null);
   const [originalAccords, setOriginalAccords] = useState<Accord[] | null>(null);
   const [normalizedAccords, setNormalizedAccords] = useState<Accord[] | null>(null);
+  const [accordColumns, setAccordColumns] = useState<string[]>([]);
   const [isNormalized, setIsNormalized] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isNormalizing, startNormalizationTransition] = useTransition();
@@ -34,7 +30,7 @@ export default function ScentMapperPage() {
     return isNormalized ? normalizedAccords : originalAccords;
   }, [isNormalized, originalAccords, normalizedAccords]);
 
-  const parseCSV = (csvText: string): PerfumeData[] => {
+  const parseCSV = (csvText: string): { perfumes: PerfumeData[], accordColumns: string[] } => {
     const lines = csvText.trim().split(/\r\n|\n/);
     if (lines.length < 2) throw new Error("CSV file must contain a header and at least one data row.");
 
@@ -44,8 +40,9 @@ export default function ScentMapperPage() {
     }
     const headers = headerLine.split(';').map(h => h.trim());
     
-    if(!ACCORD_COLUMNS.every(col => headers.includes(col))) {
-        throw new Error(`CSV must contain the following columns: ${ACCORD_COLUMNS.join(', ')}.`);
+    const dynamicAccordColumns = headers.filter(h => h.toLowerCase().startsWith('accord_'));
+    if (dynamicAccordColumns.length === 0) {
+        throw new Error(`CSV must contain columns starting with 'accord_'.`);
     }
 
     const data = lines.slice(1).map((line) => {
@@ -57,15 +54,15 @@ export default function ScentMapperPage() {
       return entry;
     });
 
-    return data;
+    return { perfumes: data, accordColumns: dynamicAccordColumns };
   };
 
-  const analyzeAccords = (perfumes: PerfumeData[]): Accord[] => {
+  const analyzeAccords = (perfumes: PerfumeData[], columns: string[]): Accord[] => {
     const frequencyMap = new Map<string, number>();
     
     perfumes.forEach(perfume => {
         const uniqueAccordsInRow = new Set<string>();
-        ACCORD_COLUMNS.forEach(col => {
+        columns.forEach(col => {
             const accord = perfume[col];
             if (accord) {
                 uniqueAccordsInRow.add(accord.toLowerCase().trim());
@@ -86,10 +83,10 @@ export default function ScentMapperPage() {
         return [];
     }
 
-    const totalOccurrences = Array.from(frequencyMap.values()).reduce((sum, count) => sum + count, 0);
+    const totalPerfumes = perfumes.length;
 
     const sortedAccords: Accord[] = Array.from(frequencyMap.entries())
-      .map(([accord, count]) => ({ accord, count, share: (count / totalOccurrences) * 100 }))
+      .map(([accord, count]) => ({ accord, count, share: (count / totalPerfumes) * 100 }))
       .sort((a, b) => b.count - a.count);
       
     return sortedAccords;
@@ -104,9 +101,10 @@ export default function ScentMapperPage() {
       try {
         const text = e.target?.result as string;
         if (!text) throw new Error("File is empty.");
-        const parsedData = parseCSV(text);
+        const { perfumes: parsedData, accordColumns: dynamicAccordColumns } = parseCSV(text);
         setRawPerfumes(parsedData);
-        const analysisResult = analyzeAccords(parsedData);
+        setAccordColumns(dynamicAccordColumns);
+        const analysisResult = analyzeAccords(parsedData, dynamicAccordColumns);
         setOriginalAccords(analysisResult);
         setNormalizedAccords(null);
         setIsNormalized(false);
@@ -153,7 +151,7 @@ export default function ScentMapperPage() {
       startNormalizationTransition(async () => {
         try {
           const allAccordLabels = [...new Set(
-            rawPerfumes.flatMap(p => ACCORD_COLUMNS.map(col => p[col]?.toLowerCase().trim()).filter(Boolean))
+            rawPerfumes.flatMap(p => accordColumns.map(col => p[col]?.toLowerCase().trim()).filter(Boolean))
           )];
           
           const { normalizedLabels } = await normalizeAccordLabels({
@@ -165,7 +163,7 @@ export default function ScentMapperPage() {
           
           const normalizedPerfumeData = rawPerfumes.map(perfume => {
               const newPerfume = { ...perfume };
-              ACCORD_COLUMNS.forEach(col => {
+              accordColumns.forEach(col => {
                   const originalAccord = newPerfume[col]?.toLowerCase().trim();
                   if (originalAccord && labelMap.has(originalAccord)) {
                       newPerfume[col] = labelMap.get(originalAccord) || "";
@@ -174,7 +172,7 @@ export default function ScentMapperPage() {
               return newPerfume;
           });
 
-          const normalizedAnalysis = analyzeAccords(normalizedPerfumeData);
+          const normalizedAnalysis = analyzeAccords(normalizedPerfumeData, accordColumns);
           setNormalizedAccords(normalizedAnalysis);
         } catch (error) {
             toast({
@@ -193,6 +191,7 @@ export default function ScentMapperPage() {
     setOriginalAccords(null);
     setNormalizedAccords(null);
     setIsNormalized(false);
+    setAccordColumns([]);
     setFileName(null);
     setIsLoading(false);
   }
@@ -272,3 +271,5 @@ export default function ScentMapperPage() {
     </div>
   );
 }
+
+    
