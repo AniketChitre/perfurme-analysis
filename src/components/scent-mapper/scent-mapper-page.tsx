@@ -158,25 +158,27 @@ export default function ScentMapperPage({ perfumes: initialPerfumes, accordColum
       <header className="p-4 border-b">
         <div className="container mx-auto flex justify-between items-center">
           <h1 className="text-3xl font-headline text-primary-foreground flex items-center gap-2">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="28"
-              height="28"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="h-8 w-8 text-primary"
+          <svg 
+            xmlns="http://www.w3.org/2000/svg" 
+            width="28"
+            height="28"
+            viewBox="0 0 24 24" 
+            fill="none" 
+            stroke="currentColor" 
+            strokeWidth="2" 
+            strokeLinecap="round" 
+            strokeLinejoin="round" 
+            className="h-8 w-8 text-primary"
             >
-              <path d="M14 4h2v10" />
-              <path d="M12 4v10" />
-              <path d="M10 4h-2" />
-              <path d="M10 8h2" />
-              <path d="M10 14h.5" />
-              <path d="M12 2c-3.3 0-6 2.7-6 6v0c0 .9.2 1.8.6 2.5l-2.1 6.5H19.5L17.4 10.5c.4-.7.6-1.6.6-2.5v0C18 4.7 15.3 2 12 2Z" />
-              <path d="M13.5 14h-3" />
+            <path d="M12 5.5V3.5" />
+            <path d="M9.5 3.5h5" />
+            <path d="M12 8.5V5.5" />
+            <path d="M8 8.5h8" />
+            <path d="M19.5 14.5c0-4.1-3.4-7.5-7.5-7.5s-7.5 3.4-7.5 7.5c0 3.1 1.9 5.8 4.5 6.9" />
+            <path d="M5.5 18.5c2.9 1.2 6.1 1.2 9 0" />
+            <path d="M19 4l1.5 1.5" />
+            <path d="M21.5 8l-1.5-1.5" />
+            <path d="M17.5 6.5l1.5-1.5" />
             </svg>
             Scent Mapper
           </h1>
@@ -215,4 +217,3 @@ export default function ScentMapperPage({ perfumes: initialPerfumes, accordColum
       </footer>
     </div>
   );
-}
