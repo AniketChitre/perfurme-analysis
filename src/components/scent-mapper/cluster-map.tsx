@@ -13,7 +13,7 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
-  Label as RechartsLabel,
+  Cell,
   Legend,
 } from "recharts";
 import {
@@ -246,8 +246,9 @@ export default function ClusterMap({ perfumes, accordColumns }: ClusterMapProps)
   
   const finalPlottableData = useMemo(() => {
     let data = plottablePerfumes;
+    const lowercasedQuery = searchQuery.toLowerCase();
+    
     if (searchQuery) {
-        const lowercasedQuery = searchQuery.toLowerCase();
         data = data.map(p => ({
             ...p,
             perfume: {
@@ -256,11 +257,8 @@ export default function ClusterMap({ perfumes, accordColumns }: ClusterMapProps)
             }
         }));
     }
-    if (highlightedCluster !== null) {
-      data = data.filter(p => p.clusterId === highlightedCluster);
-    }
     return data;
-  }, [plottablePerfumes, searchQuery, highlightedCluster]);
+  }, [plottablePerfumes, searchQuery]);
 
   const sortedSummaries = useMemo(() => {
     let summaries = [...clusterSummaries];
@@ -344,7 +342,7 @@ export default function ClusterMap({ perfumes, accordColumns }: ClusterMapProps)
         <div className="w-full h-[520px] relative">
             {isPending && <div className="absolute inset-0 bg-background/50 flex items-center justify-center z-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}
             <ResponsiveContainer width="100%" height="100%">
-                <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+                <ScatterChart margin={{ top: 20, right: 20, bottom: 40, left: 20 }}>
                     <XAxis type="number" dataKey="x" tick={false} name="PCA 1" />
                     <YAxis type="number" dataKey="y" tick={false} name="PCA 2" />
                     <Tooltip
@@ -367,45 +365,60 @@ export default function ClusterMap({ perfumes, accordColumns }: ClusterMapProps)
                             return null;
                         }}
                     />
-                    <Legend />
-                    <Scatter name="Perfumes" data={finalPlottableData} fill="#8884d8">
-                    {finalPlottableData.map((entry, index) => (
-                        <circle
-                            key={`point-${index}`}
-                            cx={entry.x}
-                            cy={entry.y}
-                            r={((entry.perfume as any)._isSearched) ? 8 : 4}
-                            fill={CHART_COLORS[entry.clusterId % CHART_COLORS.length]}
-                            fillOpacity={((entry.perfume as any)._isSearched) ? 1 : 0.7}
-                            stroke={((entry.perfume as any)._isSearched) ? "hsl(var(--foreground))" : "none"}
+                    <Legend layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{ bottom: 0 }} payload={
+                        clusterSummaries.map(summary => ({
+                            value: `Cluster ${summary.clusterId}`,
+                            type: 'circle',
+                            color: CHART_COLORS[summary.clusterId % CHART_COLORS.length]
+                        }))
+                    }/>
+                    <Scatter name="Perfumes" data={finalPlottableData}>
+                      {finalPlottableData.map((entry, index) => (
+                        <Cell 
+                          key={`cell-${index}`} 
+                          fill={CHART_COLORS[entry.clusterId % CHART_COLORS.length]} 
+                          fillOpacity={highlightedCluster === null || highlightedCluster === entry.clusterId ? 0.7 : 0.1}
+                          r={(entry.perfume as any)._isSearched ? 8 : 4}
+                          stroke={(entry.perfume as any)._isSearched ? "hsl(var(--foreground))" : "none"}
                         />
-                    ))}
+                      ))}
                     </Scatter>
 
                     {clusterSummaries.map(summary => (
-                       <RechartsLabel
-                            key={`label-${summary.clusterId}`}
-                            value={`Cluster ${summary.clusterId}`}
-                            position="top"
-                            content={props => {
-                                const { x, y, value } = props;
-                                const textX = x as number + 5;
-                                const textY = y as number;
-                                return (
-                                  <g transform={`translate(${summary.centroid.x}, ${summary.centroid.y})`}>
-                                    <foreignObject x={-75} y={-50} width={150} height={100}>
-                                      <div className="text-xs text-center p-1 rounded-md bg-background/80 border border-border shadow-sm">
-                                        <p className="font-bold">Cluster {summary.clusterId}</p>
-                                        <p>Avg Rating: {summary.avgRating.toFixed(2)}</p>
-                                        <p className="truncate">Top: {summary.topAccords.join(', ')}</p>
-                                      </div>
-                                    </foreignObject>
-                                  </g>
-                                )
-                            }}
-                       />
+                       <Scatter 
+                            key={`centroid-bubble-${summary.clusterId}`}
+                            data={[summary.centroid]}
+                            fill={CHART_COLORS[summary.clusterId % CHART_COLORS.length]}
+                            fillOpacity={0.2}
+                            shape="circle"
+                            r={Math.sqrt(summary.size) * 3} // Radius proportional to cluster size
+                       >
+                           {/* This is a bit of a hack to add a label inside the chart area */}
+                            <Label
+                                content={(props) => {
+                                    const { x, y } = props.viewBox;
+                                    return (
+                                        <foreignObject x={x - 75} y={y - 40} width={150} height={80}>
+                                            <div 
+                                                className="text-xs text-center p-1 rounded-md"
+                                                style={{
+                                                    color: 'hsl(var(--foreground))',
+                                                    backgroundColor: 'hsla(var(--background), 0.7)',
+                                                    backdropFilter: 'blur(2px)',
+                                                    border: '1px solid hsl(var(--border))',
+                                                }}
+                                            >
+                                                <p className="font-bold">Cluster {summary.clusterId}</p>
+                                                <p>{summary.size} perfumes</p>
+                                                <p>Avg Rating: {summary.avgRating.toFixed(2)}</p>
+                                                <p className="truncate">Top: {summary.topAccords.join(', ')}</p>
+                                            </div>
+                                        </foreignObject>
+                                    )
+                                }}
+                            />
+                       </Scatter>
                     ))}
-
                 </ScatterChart>
             </ResponsiveContainer>
         </div>
@@ -442,7 +455,12 @@ export default function ClusterMap({ perfumes, accordColumns }: ClusterMapProps)
                         onClick={() => setHighlightedCluster(highlightedCluster === summary.clusterId ? null : summary.clusterId)}
                         className={`cursor-pointer ${highlightedCluster === summary.clusterId ? 'bg-accent' : ''}`}
                     >
-                      <TableCell>{summary.clusterId}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                           <span className="h-3 w-3 rounded-full" style={{ backgroundColor: CHART_COLORS[summary.clusterId % CHART_COLORS.length] }}/>
+                           {summary.clusterId}
+                        </div>
+                      </TableCell>
                       <TableCell>{summary.size}</TableCell>
                       <TableCell>{summary.avgRating.toFixed(2)}</TableCell>
                       <TableCell>{summary.topAccords.join(', ')}</TableCell>
@@ -451,7 +469,7 @@ export default function ClusterMap({ perfumes, accordColumns }: ClusterMapProps)
                 </TableBody>
               </Table>
             </div>
-            {highlightedCluster !== null && <Button variant="link" onClick={() => setHighlightedCluster(null)}>Clear selection</Button>}
+            {highlightedCluster !== null && <Button variant="link" size="sm" onClick={() => setHighlightedCluster(null)} className="mt-1 px-0 h-auto">Clear selection</Button>}
         </div>
       </CardContent>
     </Card>
