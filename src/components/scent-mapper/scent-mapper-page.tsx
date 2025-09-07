@@ -40,9 +40,13 @@ export default function ScentMapperPage() {
     }
     const headers = headerLine.split(';').map(h => h.trim());
     
-    const dynamicAccordColumns = headers.filter(h => h.toLowerCase().startsWith('accord_'));
+    const dynamicAccordColumns = headers.filter(h => {
+        const lowerCaseHeader = h.toLowerCase();
+        return lowerCaseHeader.startsWith('accord_') || lowerCaseHeader.startsWith('mainaccord');
+    });
+
     if (dynamicAccordColumns.length === 0) {
-        throw new Error(`CSV must contain columns starting with 'accord_'.`);
+        throw new Error(`CSV must contain columns starting with 'accord_' or 'mainaccord'.`);
     }
 
     const data = lines.slice(1).map((line) => {
@@ -271,5 +275,3 @@ export default function ScentMapperPage() {
     </div>
   );
 }
-
-    
