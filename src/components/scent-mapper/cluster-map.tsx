@@ -89,7 +89,7 @@ interface ClusterSummary {
 type SortKey = keyof Omit<ClusterSummary, "topAccords" | "centroid">;
 
 export default function ClusterMap({ perfumes, accordColumns }: ClusterMapProps) {
-  const [k, setK] = useState(10);
+  const [k, setK] = useState(5);
   const [yearRange, setYearRange] = useState([2019, 2024]);
   const [minRating, setMinRating] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
@@ -486,5 +486,7 @@ export default function ClusterMap({ perfumes, accordColumns }: ClusterMapProps)
     </Card>
   );
 }
+
+    
 
     
