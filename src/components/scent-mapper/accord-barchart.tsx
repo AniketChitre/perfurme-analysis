@@ -17,7 +17,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ChartTooltipContent } from "@/components/ui/chart";
 
 interface AccordBarChartProps {
   data: Accord[];
@@ -71,6 +70,12 @@ export default function AccordBarChart({ data }: AccordBarChartProps) {
                             Share
                           </span>
                           <span className="font-bold">{data.share.toFixed(2)}%</span>
+                        </div>
+                        <div className="flex flex-col space-y-1">
+                          <span className="text-[0.70rem] uppercase text-muted-foreground">
+                            Avg. Rating
+                          </span>
+                          <span className="font-bold">{data.averageRating.toFixed(2)}</span>
                         </div>
                       </div>
                     </div>

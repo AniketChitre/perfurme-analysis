@@ -130,6 +130,15 @@ export default function AccordTable({ data }: AccordTableProps) {
                     {getSortIndicator("share")}
                   </Button>
                 </TableHead>
+                <TableHead className="text-right">
+                   <Button
+                    variant="ghost"
+                    onClick={() => requestSort("averageRating")}
+                  >
+                    Avg. Rating
+                    {getSortIndicator("averageRating")}
+                  </Button>
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -139,6 +148,9 @@ export default function AccordTable({ data }: AccordTableProps) {
                   <TableCell className="text-right">{item.count}</TableCell>
                   <TableCell className="text-right">
                     {item.share.toFixed(2)}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {item.averageRating.toFixed(2)}
                   </TableCell>
                 </TableRow>
               ))}

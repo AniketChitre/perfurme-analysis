@@ -12,7 +12,6 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import AccordBarChart from "./accord-barchart";
 import AccordTable from "./accord-table";
-import AccordChipCloud from "./accord-chip-cloud";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function ScentMapperPage() {
@@ -62,7 +61,7 @@ export default function ScentMapperPage() {
   };
 
   const analyzeAccords = (perfumes: PerfumeData[], columns: string[]): Accord[] => {
-    const frequencyMap = new Map<string, number>();
+    const frequencyMap = new Map<string, { count: number; ratings: number[] }>();
     
     perfumes.forEach(perfume => {
         const uniqueAccordsInRow = new Set<string>();
@@ -72,9 +71,18 @@ export default function ScentMapperPage() {
                 uniqueAccordsInRow.add(accord.toLowerCase().trim());
             }
         });
+        
+        const rating = parseFloat(perfume['Rating Value']?.replace(',', '.') || '0');
 
         uniqueAccordsInRow.forEach(accord => {
-            frequencyMap.set(accord, (frequencyMap.get(accord) || 0) + 1);
+            if (!frequencyMap.has(accord)) {
+                frequencyMap.set(accord, { count: 0, ratings: [] });
+            }
+            const current = frequencyMap.get(accord)!;
+            current.count++;
+            if (!isNaN(rating) && rating > 0) {
+                current.ratings.push(rating);
+            }
         });
     });
 
@@ -90,7 +98,16 @@ export default function ScentMapperPage() {
     const totalPerfumes = perfumes.length;
 
     const sortedAccords: Accord[] = Array.from(frequencyMap.entries())
-      .map(([accord, count]) => ({ accord, count, share: (count / totalPerfumes) * 100 }))
+      .map(([accord, { count, ratings }]) => {
+        const sumOfRatings = ratings.reduce((acc, r) => acc + r, 0);
+        const averageRating = ratings.length > 0 ? sumOfRatings / ratings.length : 0;
+        return { 
+          accord, 
+          count, 
+          share: (count / totalPerfumes) * 100,
+          averageRating
+        };
+      })
       .sort((a, b) => b.count - a.count);
       
     return sortedAccords;
@@ -260,11 +277,10 @@ export default function ScentMapperPage() {
                 </div>
               </div>
 
-              <div className="grid md:grid-cols-2 gap-8">
+              <div className="grid gap-8">
                 <AccordBarChart data={displayedAccords} />
-                <AccordChipCloud data={displayedAccords} />
+                <AccordTable data={displayedAccords} />
               </div>
-              <AccordTable data={displayedAccords} />
             </div>
           )
         )}
