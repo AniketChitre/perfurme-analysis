@@ -6,3 +6,8 @@ export interface Accord {
   share: number;
   averageRating: number;
 }
+
+export interface AccordsByYear {
+  year: number;
+  [accord: string]: number;
+}
