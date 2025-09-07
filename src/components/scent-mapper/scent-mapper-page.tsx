@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useCallback, useMemo } from "react";
 import { useDropzone } from "react-dropzone";
-import type { PerfumeData, Accord, AccordsByYear } from "@/lib/types";
+import type { PerfumeData, Accord } from "@/lib/types";
 import { normalizeAccordLabels } from "@/ai/flows/normalize-accord-labels";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, File as FileIcon, UploadCloud, Wand2, FlaskConical } from "lucide-react";
@@ -12,7 +12,6 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import AccordBarChart from "./accord-barchart";
 import AccordTable from "./accord-table";
-import AccordsByYearChart from "./accords-by-year-chart";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function ScentMapperPage() {
@@ -21,7 +20,6 @@ export default function ScentMapperPage() {
   const [normalizedAccords, setNormalizedAccords] = useState<Accord[] | null>(
     null
   );
-  const [accordsByYear, setAccordsByYear] = useState<AccordsByYear[] | null>(null);
   const [accordColumns, setAccordColumns] = useState<string[]>([]);
   const [isNormalized, setIsNormalized] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -32,14 +30,6 @@ export default function ScentMapperPage() {
   const displayedAccords = useMemo(() => {
     return isNormalized ? normalizedAccords : originalAccords;
   }, [isNormalized, originalAccords, normalizedAccords]);
-
-  const top10AccordsByRating = useMemo(() => {
-    if (!displayedAccords) return [];
-    return [...displayedAccords]
-      .sort((a, b) => b.averageRating - a.averageRating)
-      .slice(0, 10)
-      .map(a => a.accord);
-  }, [displayedAccords]);
 
   const parseCSV = (csvText: string): { perfumes: PerfumeData[], accordColumns: string[] } => {
     const lines = csvText.trim().split(/\r\n|\n/);
@@ -124,48 +114,6 @@ export default function ScentMapperPage() {
       
     return sortedAccords;
   };
-
-  const analyzeAccordsByYear = (perfumes: PerfumeData[], columns: string[], topAccords: string[]): AccordsByYear[] => {
-    const yearlyAccords = new Map<number, Map<string, number>>();
-
-    perfumes.forEach(perfume => {
-        const year = parseInt(perfume.Year, 10);
-        if (!year || year < 1900 || year > new Date().getFullYear()) return;
-
-        const uniqueAccordsInRow = new Set<string>();
-        columns.forEach(col => {
-            const accord = perfume[col];
-            if (accord) {
-                uniqueAccordsInRow.add(accord.toLowerCase().trim());
-            }
-        });
-
-        if (!yearlyAccords.has(year)) {
-            yearlyAccords.set(year, new Map());
-        }
-        const yearMap = yearlyAccords.get(year)!;
-
-        uniqueAccordsInRow.forEach(accord => {
-            if (topAccords.includes(accord)) {
-                yearMap.set(accord, (yearMap.get(accord) || 0) + 1);
-            }
-        });
-    });
-
-    const chartData: AccordsByYear[] = [];
-    const sortedYears = Array.from(yearlyAccords.keys()).sort((a, b) => a - b);
-
-    sortedYears.forEach(year => {
-        const dataPoint: AccordsByYear = { year };
-        const yearMap = yearlyAccords.get(year)!;
-        topAccords.forEach(accord => {
-            dataPoint[accord] = yearMap.get(accord) || 0;
-        });
-        chartData.push(dataPoint);
-    });
-
-    return chartData;
-  };
   
   const handleFile = (file: File) => {
     setIsLoading(true);
@@ -182,13 +130,6 @@ export default function ScentMapperPage() {
 
         const analysisResult = analyzeAccords(parsedData, dynamicAccordColumns);
         setOriginalAccords(analysisResult);
-
-        const top10AccordsByRating = [...analysisResult]
-          .sort((a, b) => b.averageRating - a.averageRating)
-          .slice(0, 10)
-          .map(a => a.accord);
-        const byYearResult = analyzeAccordsByYear(parsedData, dynamicAccordColumns, top10AccordsByRating);
-        setAccordsByYear(byYearResult);
         
         setNormalizedAccords(null);
         setIsNormalized(false);
@@ -259,13 +200,6 @@ export default function ScentMapperPage() {
           const normalizedAnalysis = analyzeAccords(normalizedPerfumeData, accordColumns);
           setNormalizedAccords(normalizedAnalysis);
 
-          const top10AccordsByRating = [...normalizedAnalysis]
-            .sort((a, b) => b.averageRating - a.averageRating)
-            .slice(0, 10)
-            .map(a => a.accord);
-          const byYearResult = analyzeAccordsByYear(normalizedPerfumeData, accordColumns, top10AccordsByRating);
-          setAccordsByYear(byYearResult);
-
         } catch (error) {
             toast({
                 variant: "destructive",
@@ -275,13 +209,6 @@ export default function ScentMapperPage() {
             setIsNormalized(false); // Revert toggle on failure
         }
       });
-    } else if (!checked && rawPerfumes && originalAccords) {
-        const top10AccordsByRating = [...originalAccords]
-          .sort((a, b) => b.averageRating - a.averageRating)
-          .slice(0, 10)
-          .map(a => a.accord);
-        const byYearResult = analyzeAccordsByYear(rawPerfumes, accordColumns, top10AccordsByRating);
-        setAccordsByYear(byYearResult);
     }
   };
 
@@ -289,7 +216,6 @@ export default function ScentMapperPage() {
     setRawPerfumes(null);
     setOriginalAccords(null);
     setNormalizedAccords(null);
-    setAccordsByYear(null);
     setIsNormalized(false);
     setAccordColumns([]);
     setFileName(null);
@@ -336,7 +262,6 @@ export default function ScentMapperPage() {
                 <Skeleton className="h-[400px] w-full" />
                 <Skeleton className="h-[400px] w-full" />
             </div>
-             <Skeleton className="h-[400px] w-full" />
           </div>
         ) : (
           displayedAccords && (
@@ -359,8 +284,7 @@ export default function ScentMapperPage() {
                 </div>
               </div>
 
-              <div className="grid gap-8">
-                {accordsByYear && <AccordsByYearChart data={accordsByYear} topAccords={top10AccordsByRating} />}
+              <div className="grid md:grid-cols-2 gap-8">
                 <AccordBarChart data={displayedAccords} />
                 <AccordTable data={displayedAccords} />
               </div>
