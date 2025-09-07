@@ -3,7 +3,7 @@
 import type { PerfumeData } from "@/lib/types";
 import { useState, useMemo, useTransition, useEffect } from "react";
 import { useDebounce } from "@/hooks/use-debounce";
-import PCA from "ml-pca";
+import { PCA } from "ml-pca";
 import { kmeans } from "ml-kmeans";
 import {
   ScatterChart,
@@ -454,5 +454,3 @@ export default function ClusterMap({ perfumes, accordColumns }: ClusterMapProps)
     </Card>
   );
 }
-
-    
