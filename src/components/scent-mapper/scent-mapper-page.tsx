@@ -12,7 +12,6 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import AccordBarChart from "./accord-barchart";
 import AccordTable from "./accord-table";
-import AccordTrends from "./accord-trends";
 import { Skeleton } from "@/components/ui/skeleton";
 import ClusterMap from "./cluster-map";
 
@@ -309,9 +308,6 @@ export default function ScentMapperPage() {
               <div className="grid md:grid-cols-2 gap-8">
                 <AccordBarChart data={displayedAccords} />
                 <AccordTable data={displayedAccords} />
-              </div>
-              <div className="grid grid-cols-1 gap-8">
-                {rawPerfumes && <AccordTrends perfumes={rawPerfumes} accordColumns={accordColumns} />}
               </div>
               <div className="grid grid-cols-1 gap-8">
                  {rawPerfumes && <ClusterMap perfumes={rawPerfumes} accordColumns={accordColumns} />}
