@@ -44,9 +44,9 @@ export default function AccordsByYearChart({ data, topAccords }: AccordsByYearCh
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="font-headline">Top 10 Accords by Year</CardTitle>
+        <CardTitle className="font-headline">Top 10 Accords by Year (by Rating)</CardTitle>
         <CardDescription>
-          Popularity of the top 10 accords over time.
+          Popularity of the top 10 highest-rated accords over time.
         </CardDescription>
       </CardHeader>
       <CardContent>

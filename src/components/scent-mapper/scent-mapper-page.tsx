@@ -33,6 +33,14 @@ export default function ScentMapperPage() {
     return isNormalized ? normalizedAccords : originalAccords;
   }, [isNormalized, originalAccords, normalizedAccords]);
 
+  const top10AccordsByRating = useMemo(() => {
+    if (!displayedAccords) return [];
+    return [...displayedAccords]
+      .sort((a, b) => b.averageRating - a.averageRating)
+      .slice(0, 10)
+      .map(a => a.accord);
+  }, [displayedAccords]);
+
   const parseCSV = (csvText: string): { perfumes: PerfumeData[], accordColumns: string[] } => {
     const lines = csvText.trim().split(/\r\n|\n/);
     if (lines.length < 2) throw new Error("CSV file must contain a header and at least one data row.");
@@ -175,8 +183,11 @@ export default function ScentMapperPage() {
         const analysisResult = analyzeAccords(parsedData, dynamicAccordColumns);
         setOriginalAccords(analysisResult);
 
-        const top10Accords = analysisResult.slice(0, 10).map(a => a.accord);
-        const byYearResult = analyzeAccordsByYear(parsedData, dynamicAccordColumns, top10Accords);
+        const top10AccordsByRating = [...analysisResult]
+          .sort((a, b) => b.averageRating - a.averageRating)
+          .slice(0, 10)
+          .map(a => a.accord);
+        const byYearResult = analyzeAccordsByYear(parsedData, dynamicAccordColumns, top10AccordsByRating);
         setAccordsByYear(byYearResult);
         
         setNormalizedAccords(null);
@@ -248,8 +259,11 @@ export default function ScentMapperPage() {
           const normalizedAnalysis = analyzeAccords(normalizedPerfumeData, accordColumns);
           setNormalizedAccords(normalizedAnalysis);
 
-          const top10Accords = normalizedAnalysis.slice(0, 10).map(a => a.accord);
-          const byYearResult = analyzeAccordsByYear(normalizedPerfumeData, accordColumns, top10Accords);
+          const top10AccordsByRating = [...normalizedAnalysis]
+            .sort((a, b) => b.averageRating - a.averageRating)
+            .slice(0, 10)
+            .map(a => a.accord);
+          const byYearResult = analyzeAccordsByYear(normalizedPerfumeData, accordColumns, top10AccordsByRating);
           setAccordsByYear(byYearResult);
 
         } catch (error) {
@@ -261,9 +275,12 @@ export default function ScentMapperPage() {
             setIsNormalized(false); // Revert toggle on failure
         }
       });
-    } else if (!checked) {
-        const top10Accords = originalAccords?.slice(0, 10).map(a => a.accord) || [];
-        const byYearResult = analyzeAccordsByYear(rawPerfumes || [], accordColumns, top10Accords);
+    } else if (!checked && rawPerfumes && originalAccords) {
+        const top10AccordsByRating = [...originalAccords]
+          .sort((a, b) => b.averageRating - a.averageRating)
+          .slice(0, 10)
+          .map(a => a.accord);
+        const byYearResult = analyzeAccordsByYear(rawPerfumes, accordColumns, top10AccordsByRating);
         setAccordsByYear(byYearResult);
     }
   };
@@ -343,7 +360,7 @@ export default function ScentMapperPage() {
               </div>
 
               <div className="grid gap-8">
-                {accordsByYear && <AccordsByYearChart data={accordsByYear} topAccords={displayedAccords.slice(0, 10).map(a => a.accord)} />}
+                {accordsByYear && <AccordsByYearChart data={accordsByYear} topAccords={top10AccordsByRating} />}
                 <AccordBarChart data={displayedAccords} />
                 <AccordTable data={displayedAccords} />
               </div>
