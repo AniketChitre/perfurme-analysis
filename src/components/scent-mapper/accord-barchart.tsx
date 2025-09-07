@@ -23,7 +23,7 @@ interface AccordBarChartProps {
 }
 
 export default function AccordBarChart({ data }: AccordBarChartProps) {
-  const chartData = data.slice(0, 15);
+  const chartData = data.slice(0, 15).reverse();
 
   return (
     <Card>
@@ -42,7 +42,6 @@ export default function AccordBarChart({ data }: AccordBarChartProps) {
               width={100}
               tick={{ fontSize: 12 }}
               interval={0}
-              reversed={true}
             />
             <Tooltip
               cursor={{ fill: "hsl(var(--accent))" }}
