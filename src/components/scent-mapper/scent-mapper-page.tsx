@@ -289,7 +289,7 @@ export default function ScentMapperPage() {
         )}
       </main>
       <footer className="text-center p-4 border-t text-muted-foreground text-sm">
-        <p>Created with elegance by an expert UX designer.</p>
+        <p>Created with elegance by <s className="text-muted-foreground/80">an expert UX designer</s> Google Firebase</p>
       </footer>
     </div>
   );
