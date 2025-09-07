@@ -108,8 +108,7 @@ export default function ClusterMap({ perfumes, accordColumns }: ClusterMapProps)
 
   const processedData = useMemo(() => {
     // 1. Filter and normalize perfumes
-    const filteredPerfumes = perfumes
-      .filter(p => {
+    const filteredPerfumes = perfumes.filter(p => {
         const year = parseInt(p.Year, 10);
         const rating = parseFloat(p["Rating Value"]?.replace(',', '.') || "0");
         return (
@@ -118,8 +117,7 @@ export default function ClusterMap({ perfumes, accordColumns }: ClusterMapProps)
           rating >= debouncedMinRating &&
           (p.Perfume || p.Brand)
         );
-      })
-      .slice(0, 10000); // Cap at 10k points for performance
+      });
 
     const uniqueAccords = new Set<string>();
     const vectorizedPerfumes: VectorizedPerfume[] = [];
