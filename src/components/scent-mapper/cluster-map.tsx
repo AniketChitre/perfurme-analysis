@@ -120,13 +120,6 @@ export default function ClusterMap({ perfumes, accordColumns }: ClusterMapProps)
       })
       .slice(0, 10000); // Cap at 10k points for performance
 
-    if (perfumes.length > 10000) {
-      toast({
-        title: "Dataset Sampled",
-        description: "Displaying the first 10,000 perfumes for performance. Summaries use the full dataset.",
-      });
-    }
-
     const uniqueAccords = new Set<string>();
     const vectorizedPerfumes: VectorizedPerfume[] = [];
 
@@ -160,8 +153,17 @@ export default function ClusterMap({ perfumes, accordColumns }: ClusterMapProps)
     }
 
     return { vectorizedPerfumes, accordIndexMap };
-  }, [perfumes, accordColumns, debouncedYearRange, debouncedMinRating, toast]);
+  }, [perfumes, accordColumns, debouncedYearRange, debouncedMinRating]);
   
+    useEffect(() => {
+        if (perfumes.length > 10000) {
+            toast({
+                title: "Dataset Sampled",
+                description: "Displaying the first 10,000 perfumes for performance. Summaries use the full dataset.",
+            });
+        }
+    }, [perfumes.length, toast]);
+
   const clusteringResult = useMemo(() => {
     const { vectorizedPerfumes } = processedData;
     if (vectorizedPerfumes.length < debouncedK) {
@@ -475,5 +477,3 @@ export default function ClusterMap({ perfumes, accordColumns }: ClusterMapProps)
     </Card>
   );
 }
-
-    
