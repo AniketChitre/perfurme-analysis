@@ -358,6 +358,7 @@ export default function ClusterMap({ perfumes, accordColumns }: ClusterMapProps)
                         content={({ active, payload }) => {
                             if (active && payload && payload.length) {
                                 const data = payload[0].payload as PlottablePerfume;
+                                if (!data.perfume) return null; // Don't show tooltip for centroids
                                 return (
                                 <div className="rounded-lg border bg-background p-2 shadow-sm max-w-xs">
                                     <p className="font-bold text-base">{data.perfume.Perfume}</p>
@@ -485,3 +486,5 @@ export default function ClusterMap({ perfumes, accordColumns }: ClusterMapProps)
     </Card>
   );
 }
+
+    
