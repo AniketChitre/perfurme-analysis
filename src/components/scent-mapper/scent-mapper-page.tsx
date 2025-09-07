@@ -1,12 +1,10 @@
 "use client";
 
-import { useState, useTransition, useCallback, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import type { PerfumeData, Accord } from "@/lib/types";
-import { normalizeAccordLabels } from "@/ai/flows/normalize-accord-labels";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Wand2, FlaskConical, AlertTriangle } from "lucide-react";
+import { Loader2, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import AccordBarChart from "./accord-barchart";
@@ -19,13 +17,8 @@ interface ScentMapperPageProps {
     error: string | null;
 }
 
-export default function ScentMapperPage({ perfumes: initialPerfumes, accordColumns: initialAccordColumns, error }: ScentMapperPageProps) {
-  const [accordColumns, setAccordColumns] = useState<string[]>(initialAccordColumns);
-  const [originalAccords, setOriginalAccords] = useState<Accord[] | null>(null);
-  const [normalizedAccords, setNormalizedAccords] = useState<Accord[] | null>(null);
-  const [isNormalized, setIsNormalized] = useState(false);
+export default function ScentMapperPage({ perfumes: initialPerfumes, accordColumns, error }: ScentMapperPageProps) {
   const [genderFilter, setGenderFilter] = useState('all');
-  const [isNormalizing, startNormalizationTransition] = useTransition();
   const { toast } = useToast();
 
   const filteredPerfumes = useMemo(() => {
@@ -88,67 +81,13 @@ export default function ScentMapperPage({ perfumes: initialPerfumes, accordColum
       
     return sortedAccords;
   }, [toast]);
-
-  // Perform analysis whenever filtered perfumes change
-  useMemo(() => {
-    if (filteredPerfumes && accordColumns.length > 0) {
-      const analysisResult = analyzeAccords(filteredPerfumes, accordColumns);
-      setOriginalAccords(analysisResult);
-      // when filter changes, we should reset normalized accords
-      setNormalizedAccords(null); 
-    }
-  }, [filteredPerfumes, accordColumns, analyzeAccords]);
   
   const displayedAccords = useMemo(() => {
-    return isNormalized ? normalizedAccords : originalAccords;
-  }, [isNormalized, originalAccords, normalizedAccords]);
-
-  const handleNormalizationToggle = (checked: boolean) => {
-    setIsNormalized(checked);
-    if (checked && !normalizedAccords && filteredPerfumes) {
-      startNormalizationTransition(async () => {
-        try {
-          const allAccordLabels = [...new Set(
-            filteredPerfumes.flatMap(p => accordColumns.map(col => p[col]?.toLowerCase().trim()).filter(Boolean))
-          )];
-          
-          if (allAccordLabels.length === 0) {
-            setNormalizedAccords([]);
-            return;
-          }
-
-          const { normalizedLabels } = await normalizeAccordLabels({
-            labels: allAccordLabels,
-            shouldNormalize: true,
-          });
-
-          const labelMap = new Map(allAccordLabels.map((original, i) => [original, normalizedLabels[i]]));
-          
-          const normalizedPerfumeData = filteredPerfumes.map(perfume => {
-              const newPerfume = { ...perfume };
-              accordColumns.forEach(col => {
-                  const originalAccord = newPerfume[col]?.toLowerCase().trim();
-                  if (originalAccord && labelMap.has(originalAccord)) {
-                      newPerfume[col] = labelMap.get(originalAccord) || "";
-                  }
-              });
-              return newPerfume;
-          });
-
-          const normalizedAnalysis = analyzeAccords(normalizedPerfumeData, accordColumns);
-          setNormalizedAccords(normalizedAnalysis);
-
-        } catch (error) {
-            toast({
-                variant: "destructive",
-                title: "Normalization Failed",
-                description: "The AI-powered normalization could not be completed.",
-            });
-            setIsNormalized(false); // Revert toggle on failure
-        }
-      });
+    if (filteredPerfumes && accordColumns.length > 0) {
+      return analyzeAccords(filteredPerfumes, accordColumns);
     }
-  };
+    return [];
+  }, [filteredPerfumes, accordColumns, analyzeAccords]);
 
   if (error) {
     return (
@@ -218,17 +157,6 @@ export default function ScentMapperPage({ perfumes: initialPerfumes, accordColum
                 <Label htmlFor="unisex">Unisex</Label>
               </div>
             </RadioGroup>
-            <div className="flex items-center space-x-2">
-                <Wand2 className="h-5 w-5 text-primary" />
-                <Label htmlFor="normalization-switch">AI Normalize Labels</Label>
-                <Switch
-                id="normalization-switch"
-                checked={isNormalized}
-                onCheckedChange={handleNormalizationToggle}
-                disabled={isNormalizing}
-                />
-                {isNormalizing && <Loader2 className="h-4 w-4 animate-spin" />}
-            </div>
           </div>
         </div>
       </header>
