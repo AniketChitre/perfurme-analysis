@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { PerfumeData } from "@/lib/types";
@@ -436,6 +437,8 @@ export default function ClusterMap({ perfumes, accordColumns }: ClusterMapProps)
                   {sortedSummaries.map((summary) => (
                     <TableRow
                         key={summary.clusterId}
+                        onMouseEnter={() => setHighlightedCluster(summary.clusterId)}
+                        onMouseLeave={() => setHighlightedCluster(null)}
                         onClick={() => setHighlightedCluster(highlightedCluster === summary.clusterId ? null : summary.clusterId)}
                         className={`cursor-pointer ${highlightedCluster === summary.clusterId ? 'bg-accent' : ''}`}
                     >
@@ -454,3 +457,5 @@ export default function ClusterMap({ perfumes, accordColumns }: ClusterMapProps)
     </Card>
   );
 }
+
+    
