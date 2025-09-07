@@ -92,7 +92,7 @@ export default function ClusterMap({ perfumes, accordColumns }: ClusterMapProps)
   const [minRating, setMinRating] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [highlightedCluster, setHighlightedCluster] = useState<number | null>(null);
-  const [sortConfig, setSortConfig] = React.useState<{
+  const [sortConfig, setSortConfig] = useState<{
     key: SortKey;
     direction: "ascending" | "descending";
   } | null>({ key: "size", direction: "descending" });
