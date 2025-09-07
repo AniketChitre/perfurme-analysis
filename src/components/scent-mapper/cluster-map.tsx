@@ -15,6 +15,7 @@ import {
   ResponsiveContainer,
   Cell,
   Legend,
+  Label as RechartsLabel
 } from "recharts";
 import {
   Card,
@@ -164,17 +165,22 @@ export default function ClusterMap({ perfumes, accordColumns }: ClusterMapProps)
         }
     }, [perfumes.length, toast]);
 
+    useEffect(() => {
+        const { vectorizedPerfumes } = processedData;
+        if (vectorizedPerfumes.length > 0 && vectorizedPerfumes.length < debouncedK) {
+            toast({
+                variant: "destructive",
+                title: "Not enough data for clustering",
+                description: `Reduced k to ${vectorizedPerfumes.length} due to insufficient data points.`,
+            });
+            setK(vectorizedPerfumes.length);
+        }
+    }, [processedData, debouncedK, toast]);
+
+
   const clusteringResult = useMemo(() => {
     const { vectorizedPerfumes } = processedData;
-    if (vectorizedPerfumes.length < debouncedK) {
-       if(vectorizedPerfumes.length > 0) {
-          toast({
-            variant: "destructive",
-            title: "Not enough data for clustering",
-            description: `Reduced k to ${vectorizedPerfumes.length} due to insufficient data points.`,
-          });
-          setK(vectorizedPerfumes.length);
-       }
+    if (vectorizedPerfumes.length < debouncedK || vectorizedPerfumes.length === 0) {
        return { plottablePerfumes: [], clusterSummaries: [] };
     }
     
@@ -369,12 +375,12 @@ export default function ClusterMap({ perfumes, accordColumns }: ClusterMapProps)
                     />
                     <Legend layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{ bottom: 0 }} payload={
                         clusterSummaries.map(summary => ({
-                            value: `Cluster ${summary.clusterId}`,
+                            value: summary.topAccords.join(', ') || `Cluster ${summary.clusterId}`,
                             type: 'circle',
                             color: CHART_COLORS[summary.clusterId % CHART_COLORS.length]
                         }))
                     }/>
-                    <Scatter name="Perfumes" data={finalPlottableData}>
+                    <Scatter name="Perfumes" data={finalPlottableData} isAnimationActive={false}>
                       {finalPlottableData.map((entry, index) => (
                         <Cell 
                           key={`cell-${index}`} 
@@ -391,14 +397,15 @@ export default function ClusterMap({ perfumes, accordColumns }: ClusterMapProps)
                             key={`centroid-bubble-${summary.clusterId}`}
                             data={[summary.centroid]}
                             fill={CHART_COLORS[summary.clusterId % CHART_COLORS.length]}
-                            fillOpacity={0.2}
+                            fillOpacity={highlightedCluster === summary.clusterId ? 0.3 : 0.1}
                             shape="circle"
+                            isAnimationActive={false}
                             r={Math.sqrt(summary.size) * 3} // Radius proportional to cluster size
                        >
-                           {/* This is a bit of a hack to add a label inside the chart area */}
-                            <Label
+                           <RechartsLabel
                                 content={(props) => {
-                                    const { x, y } = props.viewBox;
+                                    const { x, y, width, height } = props.viewBox;
+                                    if(!x || !y || !width || !height ) return null;
                                     return (
                                         <foreignObject x={x - 75} y={y - 40} width={150} height={80}>
                                             <div 
@@ -408,6 +415,7 @@ export default function ClusterMap({ perfumes, accordColumns }: ClusterMapProps)
                                                     backgroundColor: 'hsla(var(--background), 0.7)',
                                                     backdropFilter: 'blur(2px)',
                                                     border: '1px solid hsl(var(--border))',
+                                                    opacity: highlightedCluster === null || highlightedCluster === summary.clusterId ? 1 : 0.2
                                                 }}
                                             >
                                                 <p className="font-bold">Cluster {summary.clusterId}</p>
