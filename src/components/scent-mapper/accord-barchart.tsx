@@ -24,9 +24,11 @@ interface AccordBarChartProps {
 }
 
 export default function AccordBarChart({ data, topN = 15 }: AccordBarChartProps) {
+  // IMPORTANT: Recharts uses the array order for vertical bars (top -> bottom).
+  // Sort descending so the biggest value appears at the TOP, then slice.
   const chartData = [...data]
-    .sort((a, b) => b.count - a.count)
-    .slice(0, topN);
+    .sort((a, b) => b.count - a.count) // DESC
+    .slice(0, topN);                   // no reverse()
 
   return (
     <Card>
@@ -45,7 +47,6 @@ export default function AccordBarChart({ data, topN = 15 }: AccordBarChartProps)
               width={120}
               tick={{ fontSize: 12 }}
               interval={0}
-              reversed={true}
             />
             <Tooltip
               cursor={{ fill: "hsl(var(--accent))" }}

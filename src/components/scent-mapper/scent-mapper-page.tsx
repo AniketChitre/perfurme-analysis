@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import AccordBarChart from "./accord-barchart";
 import AccordTable from "./accord-table";
+import AccordTrends from "./accord-trends";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function ScentMapperPage() {
@@ -227,7 +228,26 @@ export default function ScentMapperPage() {
       <header className="p-4 border-b">
         <div className="container mx-auto flex justify-between items-center">
           <h1 className="text-3xl font-headline text-primary-foreground flex items-center gap-2">
-            <FlaskConical className="h-8 w-8 text-primary" />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="28"
+              height="28"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-8 w-8 text-primary"
+            >
+              <path d="M14 4h2v10" />
+              <path d="M12 4v10" />
+              <path d="M10 4h-2" />
+              <path d="M10 8h2" />
+              <path d="M10 14h.5" />
+              <path d="M12 2c-3.3 0-6 2.7-6 6v0c0 .9.2 1.8.6 2.5l-2.1 6.5H19.5L17.4 10.5c.4-.7.6-1.6.6-2.5v0C18 4.7 15.3 2 12 2Z" />
+              <path d="M13.5 14h-3" />
+            </svg>
             Scent Mapper
           </h1>
           {rawPerfumes && <Button onClick={handleReset} variant="outline">Upload New File</Button>}
@@ -262,6 +282,7 @@ export default function ScentMapperPage() {
                 <Skeleton className="h-[400px] w-full" />
                 <Skeleton className="h-[400px] w-full" />
             </div>
+            <Skeleton className="h-[400px] w-full" />
           </div>
         ) : (
           displayedAccords && (
@@ -287,6 +308,9 @@ export default function ScentMapperPage() {
               <div className="grid md:grid-cols-2 gap-8">
                 <AccordBarChart data={displayedAccords} />
                 <AccordTable data={displayedAccords} />
+              </div>
+              <div className="grid grid-cols-1 gap-8">
+                {rawPerfumes && <AccordTrends perfumes={rawPerfumes} accordColumns={accordColumns} />}
               </div>
             </div>
           )
