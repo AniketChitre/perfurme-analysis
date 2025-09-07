@@ -8,6 +8,7 @@ import { Loader2, Wand2, FlaskConical, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import AccordBarChart from "./accord-barchart";
 import AccordTable from "./accord-table";
 import ClusterMap from "./cluster-map";
@@ -19,15 +20,23 @@ interface ScentMapperPageProps {
 }
 
 export default function ScentMapperPage({ perfumes: initialPerfumes, accordColumns: initialAccordColumns, error }: ScentMapperPageProps) {
-  const [rawPerfumes, setRawPerfumes] = useState<PerfumeData[] | null>(initialPerfumes);
   const [accordColumns, setAccordColumns] = useState<string[]>(initialAccordColumns);
   const [originalAccords, setOriginalAccords] = useState<Accord[] | null>(null);
   const [normalizedAccords, setNormalizedAccords] = useState<Accord[] | null>(null);
   const [isNormalized, setIsNormalized] = useState(false);
+  const [genderFilter, setGenderFilter] = useState('all');
   const [isNormalizing, startNormalizationTransition] = useTransition();
   const { toast } = useToast();
 
-  const analyzeAccords = (perfumes: PerfumeData[], columns: string[]): Accord[] => {
+  const filteredPerfumes = useMemo(() => {
+    if (!initialPerfumes) return [];
+    if (genderFilter === 'all') {
+        return initialPerfumes;
+    }
+    return initialPerfumes.filter(p => p.Gender && p.Gender.toLowerCase() === genderFilter);
+  }, [initialPerfumes, genderFilter]);
+
+  const analyzeAccords = useCallback((perfumes: PerfumeData[], columns: string[]): Accord[] => {
     const frequencyMap = new Map<string, { count: number; ratings: number[] }>();
     
     perfumes.forEach(perfume => {
@@ -53,11 +62,11 @@ export default function ScentMapperPage({ perfumes: initialPerfumes, accordColum
         });
     });
 
-    if (frequencyMap.size === 0) {
+    if (frequencyMap.size === 0 && perfumes.length > 0) {
         toast({
             variant: "destructive",
             title: "No Accords Found",
-            description: "No data was found in the accord columns. Please check your file.",
+            description: "No data was found in the accord columns for the current filter.",
         });
         return [];
     }
@@ -78,15 +87,17 @@ export default function ScentMapperPage({ perfumes: initialPerfumes, accordColum
       .sort((a, b) => b.count - a.count);
       
     return sortedAccords;
-  };
+  }, [toast]);
 
-  // Perform initial analysis once
+  // Perform analysis whenever filtered perfumes change
   useMemo(() => {
-    if (initialPerfumes && initialAccordColumns.length > 0) {
-      const analysisResult = analyzeAccords(initialPerfumes, initialAccordColumns);
+    if (filteredPerfumes && accordColumns.length > 0) {
+      const analysisResult = analyzeAccords(filteredPerfumes, accordColumns);
       setOriginalAccords(analysisResult);
+      // when filter changes, we should reset normalized accords
+      setNormalizedAccords(null); 
     }
-  }, [initialPerfumes, initialAccordColumns]);
+  }, [filteredPerfumes, accordColumns, analyzeAccords]);
   
   const displayedAccords = useMemo(() => {
     return isNormalized ? normalizedAccords : originalAccords;
@@ -94,13 +105,18 @@ export default function ScentMapperPage({ perfumes: initialPerfumes, accordColum
 
   const handleNormalizationToggle = (checked: boolean) => {
     setIsNormalized(checked);
-    if (checked && !normalizedAccords && rawPerfumes) {
+    if (checked && !normalizedAccords && filteredPerfumes) {
       startNormalizationTransition(async () => {
         try {
           const allAccordLabels = [...new Set(
-            rawPerfumes.flatMap(p => accordColumns.map(col => p[col]?.toLowerCase().trim()).filter(Boolean))
+            filteredPerfumes.flatMap(p => accordColumns.map(col => p[col]?.toLowerCase().trim()).filter(Boolean))
           )];
           
+          if (allAccordLabels.length === 0) {
+            setNormalizedAccords([]);
+            return;
+          }
+
           const { normalizedLabels } = await normalizeAccordLabels({
             labels: allAccordLabels,
             shouldNormalize: true,
@@ -108,7 +124,7 @@ export default function ScentMapperPage({ perfumes: initialPerfumes, accordColum
 
           const labelMap = new Map(allAccordLabels.map((original, i) => [original, normalizedLabels[i]]));
           
-          const normalizedPerfumeData = rawPerfumes.map(perfume => {
+          const normalizedPerfumeData = filteredPerfumes.map(perfume => {
               const newPerfume = { ...perfume };
               accordColumns.forEach(col => {
                   const originalAccord = newPerfume[col]?.toLowerCase().trim();
@@ -155,58 +171,92 @@ export default function ScentMapperPage({ perfumes: initialPerfumes, accordColum
 
   return (
     <div className="min-h-screen bg-background text-foreground font-body">
-      <header className="p-4 border-b">
-        <div className="container mx-auto flex justify-between items-center">
+       <header className="p-4 border-b sticky top-0 bg-background/95 backdrop-blur-sm z-10">
+        <div className="container mx-auto flex flex-wrap justify-between items-center gap-4">
           <h1 className="text-3xl font-headline text-primary-foreground flex items-center gap-2">
-          <svg 
-            xmlns="http://www.w3.org/2000/svg" 
-            width="28"
-            height="28"
-            viewBox="0 0 24 24" 
-            fill="none" 
-            stroke="currentColor" 
-            strokeWidth="2" 
-            strokeLinecap="round" 
-            strokeLinejoin="round" 
-            className="h-8 w-8 text-primary"
+          <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="28"
+              height="28"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-8 w-8 text-primary"
             >
-            <path d="M12 5.5V3.5" />
-            <path d="M9.5 3.5h5" />
-            <path d="M12 8.5V5.5" />
-            <path d="M8 8.5h8" />
-            <path d="M19.5 14.5c0-4.1-3.4-7.5-7.5-7.5s-7.5 3.4-7.5 7.5c0 3.1 1.9 5.8 4.5 6.9" />
-            <path d="M5.5 18.5c2.9 1.2 6.1 1.2 9 0" />
-            <path d="M19 4l1.5 1.5" />
-            <path d="M21.5 8l-1.5-1.5" />
-            <path d="M17.5 6.5l1.5-1.5" />
+              <path d="M12 5.5V3.5" />
+              <path d="M9.5 3.5h5" />
+              <path d="M12 8.5V5.5" />
+              <path d="M8 8.5h8" />
+              <path d="M19.5 14.5c0-4.1-3.4-7.5-7.5-7.5s-7.5 3.4-7.5 7.5c0 3.1 1.9 5.8 4.5 6.9" />
+              <path d="M5.5 18.5c2.9 1.2 6.1 1.2 9 0" />
+              <path d="M19 4l1.5 1.5" />
+              <path d="M21.5 8l-1.5-1.5" />
+              <path d="M17.5 6.5l1.5-1.5" />
             </svg>
             Scent Mapper
           </h1>
-          <div className="flex items-center space-x-2 p-2 rounded-lg bg-card border">
-            <Wand2 className="h-5 w-5 text-primary" />
-            <Label htmlFor="normalization-switch">AI Normalize Labels</Label>
-            <Switch
-              id="normalization-switch"
-              checked={isNormalized}
-              onCheckedChange={handleNormalizationToggle}
-              disabled={isNormalizing}
-            />
-            {isNormalizing && <Loader2 className="h-4 w-4 animate-spin" />}
+          <div className="flex items-center space-x-4 p-2 rounded-lg bg-card border">
+            <RadioGroup value={genderFilter} onValueChange={setGenderFilter} className="flex items-center space-x-2">
+              <Label>Gender:</Label>
+              <div className="flex items-center space-x-1">
+                <RadioGroupItem value="all" id="all" />
+                <Label htmlFor="all">All</Label>
+              </div>
+              <div className="flex items-center space-x-1">
+                <RadioGroupItem value="men" id="men" />
+                <Label htmlFor="men">Men</Label>
+              </div>
+              <div className="flex items-center space-x-1">
+                <RadioGroupItem value="women" id="women" />
+                <Label htmlFor="women">Women</Label>
+              </div>
+               <div className="flex items-center space-x-1">
+                <RadioGroupItem value="unisex" id="unisex" />
+                <Label htmlFor="unisex">Unisex</Label>
+              </div>
+            </RadioGroup>
+            <div className="flex items-center space-x-2">
+                <Wand2 className="h-5 w-5 text-primary" />
+                <Label htmlFor="normalization-switch">AI Normalize Labels</Label>
+                <Switch
+                id="normalization-switch"
+                checked={isNormalized}
+                onCheckedChange={handleNormalizationToggle}
+                disabled={isNormalizing}
+                />
+                {isNormalizing && <Loader2 className="h-4 w-4 animate-spin" />}
+            </div>
           </div>
         </div>
       </header>
       <main className="container mx-auto p-4 md:p-8">
-        {displayedAccords && rawPerfumes && (
+        {displayedAccords && filteredPerfumes ? (
             <div className="grid gap-8">
-              <div className="grid md:grid-cols-2 gap-8">
-                <AccordBarChart data={displayedAccords} />
-                <AccordTable data={displayedAccords} />
-              </div>
-              <div className="grid grid-cols-1 gap-8">
-                 <ClusterMap perfumes={rawPerfumes} accordColumns={accordColumns} />
-              </div>
+              {displayedAccords.length > 0 ? (
+                <>
+                <div className="grid md:grid-cols-2 gap-8">
+                    <AccordBarChart data={displayedAccords} />
+                    <AccordTable data={displayedAccords} />
+                </div>
+                <div className="grid grid-cols-1 gap-8">
+                    <ClusterMap perfumes={filteredPerfumes} accordColumns={accordColumns} />
+                </div>
+                </>
+              ) : (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>No Data Available</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p>There is no perfume data to display for the selected filter. Please select another option.</p>
+                  </CardContent>
+                </Card>
+              )}
             </div>
-          )
+          ) : <div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin" /></div>
         }
       </main>
       <footer className="text-center p-4 border-t text-muted-foreground text-sm">
@@ -217,3 +267,4 @@ export default function ScentMapperPage({ perfumes: initialPerfumes, accordColum
       </footer>
     </div>
   );
+}
